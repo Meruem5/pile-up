@@ -24,9 +24,14 @@
   var householdId = null;
   var userEmail = null;
   var goals = [];
-  var assumptions = { capacity:0, liquid:0, returnPct:0, fx:318 };
+  var assumptions = { liquid:0, returnPct:0 };
+  var household = { splitRule:'equal' };
+  var members = [];      // [{id, email, displayName, capacity}] — everyone in the household
+  var meId = null;       // this viewer's member id
+  var chartView = 'household';  // 'household' or a member id
 
-  // Unsaved local changes, keyed 'a' (assumptions), 'g:<id>' (upsert), 'd:<id>' (delete).
+  // Unsaved local changes, keyed 'a' (assumptions), 'h' (household split rule),
+  // 'm' (my own member row), 'g:<id>' (goal upsert), 'd:<id>' (goal delete).
   // Kept until the server confirms, so a failed save can be retried and a
   // partner's live update never overwrites something you haven't saved yet.
   var dirty = {};
@@ -50,19 +55,39 @@
       targetAmount: num(r.target_amount),
       alreadySaved: num(r.already_saved),
       targetDate: /^\d{4}-\d{2}-\d{2}$/.test(r.target_date) ? r.target_date : isoDate(new Date()),
-      notes: String(r.notes || '').slice(0, 2000)
+      notes: String(r.notes || '').slice(0, 2000),
+      owner: r.owner ? String(r.owner) : null,
+      status: ['active','paused','done'].indexOf(r.status) !== -1 ? r.status : 'active',
+      splitMode: ['default','equal','capacity','custom'].indexOf(r.split_mode) !== -1 ? r.split_mode : 'default',
+      splitMember: r.split_member ? String(r.split_member) : null,
+      splitPct: r.split_pct == null ? null : num(r.split_pct, 100)
     };
   }
   function goalToRow(g){
     return {
       household_id: householdId, id: g.id, color: g.color, name: g.name, type: g.type,
       floor: g.floor, target_amount: g.targetAmount, already_saved: g.alreadySaved,
-      target_date: g.targetDate, notes: g.notes
+      target_date: g.targetDate, notes: g.notes,
+      owner: g.owner, status: g.status, split_mode: g.splitMode,
+      split_member: g.splitMember, split_pct: g.splitPct
     };
   }
   function assumptionsFromRow(r){
-    return { capacity: num(r.capacity), liquid: num(r.liquid), returnPct: num(r.return_pct, 20), fx: num(r.fx) || 318 };
+    return { liquid: num(r.liquid), returnPct: num(r.return_pct, 20) };
   }
+  function memberFromRow(r){
+    return {
+      id: String(r.id), email: String(r.email || ''),
+      displayName: r.display_name ? String(r.display_name).slice(0, 40) : '',
+      capacity: num(r.capacity)
+    };
+  }
+  function memberName(m){
+    if(!m) return 'Someone';
+    return m.displayName || m.email.split('@')[0] || 'Someone';
+  }
+  function memberById(id){ return members.find(function(m){ return m.id === id; }) || null; }
+  function me(){ return memberById(meId); }
   function isoDate(d){
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   }
@@ -100,6 +125,8 @@
   function markGoal(goal){ if(!dirty['d:' + goal.id]) mark('g:' + goal.id); }
   function markDeleted(id){ if(dirty['g:' + id] !== 'sending' && dirty['g:' + id] !== 'again') delete dirty['g:' + id]; mark('d:' + id); }
   function markAssumptions(){ mark('a'); }
+  function markHousehold(){ mark('h'); }
+  function markMe(){ mark('m'); }
 
   function flush(){
     lastError = null;
@@ -109,9 +136,16 @@
       var req;
       if(key === 'a'){
         req = sb.from('assumptions').update({
-          capacity: assumptions.capacity, liquid: assumptions.liquid,
-          return_pct: assumptions.returnPct, fx: assumptions.fx
+          liquid: assumptions.liquid, return_pct: assumptions.returnPct
         }).eq('household_id', householdId).select('household_id');
+      } else if(key === 'h'){
+        req = sb.from('households').update({ split_rule: household.splitRule }).eq('id', householdId).select('id');
+      } else if(key === 'm'){
+        var mine = me();
+        if(!mine){ delete dirty[key]; return; }
+        req = sb.from('household_members').update({
+          display_name: mine.displayName || null, capacity: mine.capacity
+        }).eq('id', mine.id).select('id');
       } else if(key.indexOf('g:') === 0){
         var g = goals.find(function(x){ return x.id === key.slice(2); });
         if(!g){ delete dirty[key]; return; }
@@ -151,11 +185,27 @@
   function fetchAll(){
     return Promise.all([
       sb.from('assumptions').select('*').eq('household_id', householdId).maybeSingle(),
-      sb.from('goals').select('*').eq('household_id', householdId)
+      sb.from('goals').select('*').eq('household_id', householdId),
+      sb.from('household_members').select('id, email, display_name, capacity').eq('household_id', householdId),
+      sb.from('households').select('id, split_rule').eq('id', householdId).maybeSingle()
     ]).then(function(res){
-      if(res[0].error) throw res[0].error;
-      if(res[1].error) throw res[1].error;
+      res.forEach(function(r){
+        if(!r.error) return;
+        // New page, old database: the migration hasn't been run yet.
+        if(/column .* does not exist|split_rule|display_name/.test(r.error.message || '')){
+          throw new Error('the database needs updating — run supabase/migrations/002_people_and_ownership.sql (README.md, setup step 2)');
+        }
+        throw r.error;
+      });
       if(!res[0].data) throw new Error('This household has no assumptions row yet — see README.md setup step 3.');
+      if(!res[3].data) throw new Error('Couldn’t read this household.');
+      var mineLocal = me();
+      members = res[2].data.map(memberFromRow).sort(function(a, b){ return a.email < b.email ? -1 : 1; });
+      var mineServer = members.find(function(m){ return m.email === userEmail; });
+      if(!mineServer) throw new Error('Couldn’t find your own member row.');
+      meId = mineServer.id;
+      if(dirty.m && mineLocal){ mineServer.displayName = mineLocal.displayName; mineServer.capacity = mineLocal.capacity; }
+      if(!dirty.h) household.splitRule = res[3].data.split_rule === 'capacity' ? 'capacity' : 'equal';
       var serverGoals = res[1].data.map(goalFromRow).filter(Boolean);
       // Keep anything you've changed locally but not yet saved.
       var localById = {};
@@ -208,32 +258,90 @@
     return d;
   }
 
+  // ---------- Who pays what ----------
+  // Returns {memberId: fraction} for a goal. An owned goal is 100% its owner's.
+  // A shared goal splits by its own mode, or by the household rule when its
+  // mode is 'default' (ruleOverride swaps that rule, for the side-by-side view).
+  function totalCapacity(){ return members.reduce(function(s, m){ return s + m.capacity; }, 0); }
+  function capacityMissing(){ return members.some(function(m){ return m.capacity <= 0; }); }
+  function splitFor(g, ruleOverride){
+    var out = {};
+    if(!members.length) return out;
+    var owner = g.owner && memberById(g.owner);
+    if(owner){ out[owner.id] = 1; return out; }
+    var mode = g.splitMode === 'default' ? (ruleOverride || household.splitRule) : g.splitMode;
+    var custom = mode === 'custom' && members.length === 2 && memberById(g.splitMember) && g.splitPct != null;
+    if(custom){
+      members.forEach(function(m){ out[m.id] = m.id === g.splitMember ? g.splitPct / 100 : 1 - g.splitPct / 100; });
+      return out;
+    }
+    var total = totalCapacity();
+    // By capacity needs everyone's number; until then it falls back to equal.
+    if(mode === 'capacity' && total > 0 && !capacityMissing()){
+      members.forEach(function(m){ out[m.id] = m.capacity / total; });
+    } else {
+      members.forEach(function(m){ out[m.id] = 1 / members.length; });
+    }
+    return out;
+  }
+  function effectiveMode(g){
+    if(g.owner && memberById(g.owner)) return 'owner';
+    return g.splitMode === 'default' ? household.splitRule : g.splitMode;
+  }
+
   function derive(){
     var now = new Date();
     var today = isoDate(now);
+    var altRule = household.splitRule === 'equal' ? 'capacity' : 'equal';
     var withCalc = goals.map(function(g){
+      var active = g.status === 'active';
       var monthsLeft = monthsFromNow(g.targetDate);
-      var remaining = Math.max(0, g.targetAmount - (g.alreadySaved || 0));
-      var monthlyRequired = remaining / monthsLeft;
+      var remaining = g.status === 'done' ? 0 : Math.max(0, g.targetAmount - (g.alreadySaved || 0));
+      // Paused and done goals ask for nothing this month.
+      var monthlyRequired = active ? remaining / monthsLeft : 0;
       // Past its date: whatever's unfunded is due now. Flagged rather than
       // silently shown like a goal that's simply due next month.
-      var overdue = g.targetDate < today;
-      return Object.assign({}, g, {monthsLeft:monthsLeft, remaining:remaining, monthlyRequired:monthlyRequired, overdue:overdue});
+      var overdue = active && g.targetDate < today;
+      var split = splitFor(g), splitAlt = splitFor(g, altRule);
+      return Object.assign({}, g, {monthsLeft:monthsLeft, remaining:remaining, monthlyRequired:monthlyRequired,
+        overdue:overdue, active:active, split:split, splitAlt:splitAlt,
+        shared: !(g.owner && memberById(g.owner))});
     });
     var totalRequired = withCalc.reduce(function(s,g){ return s + g.monthlyRequired; }, 0);
     var overdueGoals = withCalc.filter(function(g){ return g.overdue && g.remaining > 0; });
     var overdueRequired = overdueGoals.reduce(function(s,g){ return s + g.monthlyRequired; }, 0);
-    var gap = assumptions.capacity - totalRequired;
-    return {now:now, goals:withCalc, totalRequired:totalRequired, gap:gap, overdueGoals:overdueGoals, overdueRequired:overdueRequired};
+    var capacity = totalCapacity();
+    var people = members.map(function(m){
+      var shared = 0, sharedAlt = 0, own = 0;
+      withCalc.forEach(function(g){
+        if(!g.monthlyRequired) return;
+        if(g.shared){
+          shared += g.monthlyRequired * (g.split[m.id] || 0);
+          sharedAlt += g.monthlyRequired * (g.splitAlt[m.id] || 0);
+        } else if(g.owner === m.id){
+          own += g.monthlyRequired;
+        }
+      });
+      return {member:m, shared:shared, sharedAlt:sharedAlt, own:own, total:shared + own, left:m.capacity - shared - own};
+    });
+    return {now:now, goals:withCalc, totalRequired:totalRequired, capacity:capacity, gap:capacity - totalRequired,
+      overdueGoals:overdueGoals, overdueRequired:overdueRequired, people:people, altRule:altRule};
+  }
+
+  // What one person (or the household) puts toward a goal each month.
+  function viewShare(g, view){
+    if(view === 'household') return g.monthlyRequired;
+    return g.monthlyRequired * (g.split[view] || 0);
   }
 
   var state = derive();
 
   function syncInputs(){
-    document.getElementById('in-capacity').value = assumptions.capacity;
     document.getElementById('in-liquid').value = assumptions.liquid;
     document.getElementById('in-return').value = assumptions.returnPct;
-    document.getElementById('in-fx').value = assumptions.fx;
+    document.querySelectorAll('.split-field [data-rule]').forEach(function(b){
+      b.setAttribute('aria-checked', String(b.getAttribute('data-rule') === household.splitRule));
+    });
   }
 
   function renderSummary(){
@@ -254,9 +362,6 @@
     noteEl.appendChild(dot);
     noteEl.appendChild(label);
 
-    document.getElementById('statRequiredHuf').textContent =
-      '≈ Ft ' + Math.round(state.totalRequired * assumptions.fx).toLocaleString('en-US') + '/mo at ' + assumptions.fx + ' HUF per USD';
-
     if(state.overdueGoals.length){
       var od = document.createElement('div');
       od.className = 'stat-note overdue';
@@ -269,6 +374,69 @@
     }
   }
 
+  // ---------- People ----------
+  var RULE_LABEL = {equal:'50/50', capacity:'by capacity'};
+  function renderPeople(){
+    var grid = document.getElementById('peopleGrid');
+    var editingEl = document.activeElement && grid.contains(document.activeElement) ? document.activeElement.id : null;
+    grid.innerHTML = state.people.map(function(p){
+      var m = p.member, mine = m.id === meId;
+      var name = mine
+        ? '<input class="person-name-input" id="myName" type="text" maxlength="40" value="' + escapeHtml(m.displayName) + '" placeholder="' + escapeHtml(memberName(m)) + '" aria-label="Your name">'
+        : '<span class="person-name">' + escapeHtml(memberName(m)) + '</span>';
+      var cap = mine
+        ? '<span class="person-cap"><span class="prefix">$</span><input id="myCapacity" type="number" step="50" min="0" value="' + m.capacity + '" aria-label="Your monthly savings capacity"></span>'
+        : '<span class="v">' + (m.capacity > 0 ? fmtUSD(m.capacity) : '<span class="alt">not set yet</span>') + '</span>';
+      var ok = p.left >= 0;
+      return '<div class="person">' +
+        '<div class="person-head">' + name + (mine ? '<span class="you-tag">You</span>' : '') + '</div>' +
+        '<div class="person-row"><span>Can save each month</span>' + cap + '</div>' +
+        '<div class="person-row"><span>Share of shared goals</span><span class="v">' + fmtUSD(p.shared) +
+          (Math.round(p.sharedAlt) !== Math.round(p.shared) ? '<span class="alt">(' + fmtUSD(p.sharedAlt) + ' ' + RULE_LABEL[state.altRule] + ')</span>' : '') + '</span></div>' +
+        '<div class="person-row"><span>Own goals</span><span class="v">' + fmtUSD(p.own) + '</span></div>' +
+        '<div class="person-row total"><span>Needed each month</span><span class="v">' + fmtUSD(p.total) + '</span></div>' +
+        '<div class="person-row left"><span><span class="dot ' + (ok ? 'good' : 'critical') + '" style="display:inline-block;margin-right:6px;"></span>' +
+          (ok ? 'Left over' : 'Short by') + '</span><span class="v">' + fmtUSD(Math.abs(p.left)) + '</span></div>' +
+      '</div>';
+    }).join('');
+
+    var notes = [];
+    var unset = members.filter(function(m){ return m.capacity <= 0; });
+    if(unset.length){
+      var usesCapacity = household.splitRule === 'capacity' || goals.some(function(g){ return g.splitMode === 'capacity'; });
+      notes.push(unset.map(memberName).join(' and ') + (unset.length > 1 ? ' haven’t' : ' hasn’t') + ' set a savings capacity yet' +
+        (usesCapacity ? ', so “by capacity” splits fall back to 50/50 for now.' : '.'));
+    }
+    if(members.length !== 2) notes.push('Custom percentage splits need exactly two people in the household.');
+    document.getElementById('peopleNote').textContent = notes.join(' ');
+
+    var nameEl = document.getElementById('myName');
+    if(nameEl) nameEl.addEventListener('change', function(){
+      var mine = me(); if(!mine) return;
+      mine.displayName = nameEl.value.trim().slice(0, 40);
+      markMe(); renderAll();
+    });
+    var capEl = document.getElementById('myCapacity');
+    if(capEl) capEl.addEventListener('change', function(){
+      var mine = me(); if(!mine) return;
+      var v = parseFloat(capEl.value);
+      if(!isNaN(v) && v >= 0 && v <= MAX_AMOUNT){ mine.capacity = v; markMe(); }
+      renderAll();
+    });
+    if(editingEl && document.getElementById(editingEl)) document.getElementById(editingEl).focus();
+  }
+
+  function renderViewSwitch(){
+    var el = document.getElementById('viewSwitch');
+    if(chartView !== 'household' && !memberById(chartView)) chartView = 'household';
+    var opts = [{id:'household', label:'Household'}].concat(members.map(function(m){
+      return {id:m.id, label: m.id === meId ? 'You' : memberName(m)};
+    }));
+    el.innerHTML = opts.map(function(o){
+      return '<button type="button" role="radio" data-view="' + escapeHtml(o.id) + '" aria-checked="' + (o.id === chartView) + '">' + escapeHtml(o.label) + '</button>';
+    }).join('');
+  }
+
   // ---------- Balance chart ----------
   function renderBalanceChart(){
     var W = 880, H = 340, ML = 54, MR = 16, MT = 16, MB = 84;
@@ -278,13 +446,13 @@
     var series = [assumptions.liquid];
     var spendAt = {};
     state.goals.forEach(function(g){
-      if(g.type === 'purchase' && !g.overdue && g.monthsLeft <= HORIZON_MONTHS){
+      if(g.active && g.type === 'purchase' && !g.overdue && g.monthsLeft <= HORIZON_MONTHS){
         spendAt[g.monthsLeft] = (spendAt[g.monthsLeft] || 0) + g.targetAmount;
       }
     });
     var bal = assumptions.liquid;
     for(var m = 1; m <= HORIZON_MONTHS; m++){
-      bal = bal * (1 + monthlyReturn) + assumptions.capacity;
+      bal = bal * (1 + monthlyReturn) + state.capacity;
       if(spendAt[m]) bal -= spendAt[m];
       series.push(bal);
     }
@@ -319,7 +487,7 @@
     var milestoneMarks = '';
     var row = 0;
     state.goals.slice().sort(function(a,b){ return a.monthsLeft - b.monthsLeft; }).forEach(function(g, idx){
-      if(g.overdue || g.monthsLeft > HORIZON_MONTHS) return;
+      if(!g.active || g.overdue || g.monthsLeft > HORIZON_MONTHS) return;
       var x = xFor(g.monthsLeft);
       var colorVar = 'var(' + SERIES_VARS[g.color] + ')';
       if(g.type === 'purchase'){
@@ -393,19 +561,23 @@
     var W = 880, H = 300, ML = 54, MR = 16, MT = 16, MB = 34;
     var plotW = W - ML - MR, plotH = H - MT - MB;
     var startYear = state.now.getFullYear();
+    // In a person's view each goal shows only their part of it.
+    var vgoals = state.goals.map(function(g){
+      return Object.assign({}, g, {monthlyRequired: viewShare(g, chartView)});
+    }).filter(function(g){ return g.monthlyRequired > 0; });
     var years = [];
     for(var y = startYear; y <= startYear + 13; y++) years.push(y);
 
     var offChart = [];
     var perYear = years.map(function(yr){
-      var active = state.goals.filter(function(g){
+      var active = vgoals.filter(function(g){
         var gYear = new Date(g.targetDate + 'T00:00:00').getFullYear();
         return gYear >= yr;
       });
       return active;
     });
 
-    state.goals.forEach(function(g){
+    vgoals.forEach(function(g){
       var gYear = new Date(g.targetDate + 'T00:00:00').getFullYear();
       if(gYear > years[years.length - 1]) offChart.push(g);
     });
@@ -463,7 +635,7 @@
     wrap._chart = {W:W, H:H, perYear:perYear, years:years};
 
     var legend = document.getElementById('legend');
-    legend.innerHTML = state.goals.slice().sort(function(a,b){ return COLOR_ORDER.indexOf(a.color) - COLOR_ORDER.indexOf(b.color); }).map(function(g){
+    legend.innerHTML = vgoals.slice().sort(function(a,b){ return COLOR_ORDER.indexOf(a.color) - COLOR_ORDER.indexOf(b.color); }).map(function(g){
       return '<span class="legend-item"><span class="legend-swatch" style="background:var('+SERIES_VARS[g.color]+')"></span>'+escapeHtml(g.name)+'</span>';
     }).join('');
   }
@@ -501,7 +673,38 @@
       var colorOptions = COLOR_ORDER.map(function(c){
         return '<option value="'+c+'"'+(c === g.color ? ' selected' : '')+'>'+capitalize(c)+'</option>';
       }).join('');
-      return '<tr>'+
+      var gid = escapeHtml(g.id);
+      var ownerOptions = '<option value="">Shared</option>' + members.map(function(m){
+        return '<option value="'+escapeHtml(m.id)+'"'+(g.owner === m.id ? ' selected' : '')+'>'+escapeHtml(memberName(m))+(m.id === meId ? ' (you)' : '')+'</option>';
+      }).join('');
+      var statusOptions = [['active','Active'],['paused','Paused'],['done','Done']].map(function(o){
+        return '<option value="'+o[0]+'"'+(g.status === o[0] ? ' selected' : '')+'>'+o[1]+'</option>';
+      }).join('');
+      var splitControls = '';
+      if(g.shared){
+        var splitOptions = [['default','Split: household rule'],['equal','Split: 50/50'],['capacity','Split: by capacity']]
+          .concat(members.length === 2 ? [['custom','Split: custom %']] : []).map(function(o){
+            return '<option value="'+o[0]+'"'+(g.splitMode === o[0] ? ' selected' : '')+'>'+o[1]+'</option>';
+          }).join('');
+        splitControls = '<select data-field="splitMode" data-id="'+gid+'" aria-label="How this goal is split">'+splitOptions+'</select>';
+        if(g.splitMode === 'custom' && members.length === 2){
+          var myPct = g.splitMember === meId ? g.splitPct : (g.splitPct == null ? 50 : 100 - g.splitPct);
+          splitControls += '<label><input class="pct" type="number" min="0" max="100" step="5" data-field="splitPct" data-id="'+gid+'" value="'+(myPct == null ? 50 : Math.round(myPct * 100) / 100)+'" aria-label="Your percentage"> % you</label>';
+        }
+      }
+      var whoPays = '';
+      if(g.monthlyRequired > 0 && g.shared && members.length){
+        whoPays = '<div class="split-line">' + members.map(function(m){
+          return '<div>' + escapeHtml(m.id === meId ? 'You' : memberName(m)) + ' ' + fmtUSD(g.monthlyRequired * (g.split[m.id] || 0)) + '</div>';
+        }).join('') + '</div>';
+      } else if(g.monthlyRequired > 0 && !g.shared){
+        var o = memberById(g.owner);
+        whoPays = '<div class="split-line">' + escapeHtml(o.id === meId ? 'All yours' : 'All ' + memberName(o) + '’s') + '</div>';
+      }
+      var monthsCell = g.status === 'done' ? '<span class="state-tag">Done</span>'
+        : g.status === 'paused' ? '<span class="state-tag">Paused</span>'
+        : g.overdue ? '<span class="overdue">Overdue</span>' : g.monthsLeft;
+      return '<tr'+(g.active ? '' : ' class="inactive"')+'>'+
         '<td>'+
           '<div class="goal-name-row">'+
             '<span class="color-dot" style="background:var('+SERIES_VARS[g.color]+')"></span>'+
@@ -517,12 +720,17 @@
             '<label><input type="checkbox" data-field="floor" data-id="'+escapeHtml(g.id)+'" '+(g.floor ? 'checked' : '')+'> Floor</label>'+
             '<button type="button" class="remove-btn" data-id="'+escapeHtml(g.id)+'">Remove</button>'+
           '</div>'+
+          '<div class="row-controls">'+
+            '<select data-field="owner" data-id="'+gid+'" aria-label="Whose goal">'+ownerOptions+'</select>'+
+            '<select data-field="status" data-id="'+gid+'" aria-label="Status">'+statusOptions+'</select>'+
+            splitControls+
+          '</div>'+
         '</td>'+
         '<td class="num"><input type="number" step="500" min="0" data-field="targetAmount" data-id="'+escapeHtml(g.id)+'" value="'+g.targetAmount+'"></td>'+
         '<td class="num"><input class="already-input" type="number" step="500" min="0" data-field="alreadySaved" data-id="'+escapeHtml(g.id)+'" value="'+g.alreadySaved+'"></td>'+
         '<td><input type="date" data-field="targetDate" data-id="'+escapeHtml(g.id)+'" value="'+escapeHtml(g.targetDate)+'"></td>'+
-        '<td class="num months-cell">'+(g.overdue ? '<span class="overdue">Overdue</span>' : g.monthsLeft)+'</td>'+
-        '<td class="num req-cell">'+fmtUSD(g.monthlyRequired)+'</td>'+
+        '<td class="num months-cell">'+monthsCell+'</td>'+
+        '<td class="num req-cell">'+fmtUSD(g.monthlyRequired)+whoPays+'</td>'+
       '</tr>';
     }).join('');
 
@@ -546,6 +754,18 @@
           goal.type = input.value === 'reserve' ? 'reserve' : 'purchase';
         } else if(field === 'floor'){
           goal.floor = input.checked;
+        } else if(field === 'owner'){
+          goal.owner = memberById(input.value) ? input.value : null;
+        } else if(field === 'status'){
+          if(['active','paused','done'].indexOf(input.value) !== -1) goal.status = input.value;
+        } else if(field === 'splitMode'){
+          if(['default','equal','capacity','custom'].indexOf(input.value) !== -1) goal.splitMode = input.value;
+          if(goal.splitMode === 'custom' && (!memberById(goal.splitMember) || goal.splitPct == null)){
+            goal.splitMember = meId; goal.splitPct = 50;
+          }
+        } else if(field === 'splitPct'){
+          var pct = parseFloat(input.value);
+          if(!isNaN(pct) && pct >= 0 && pct <= 100){ goal.splitMember = meId; goal.splitPct = pct; }
         }
         markGoal(goal);
         renderAll();
@@ -583,16 +803,33 @@
   function renderAll(){
     state = derive();
     renderSummary();
+    renderPeople();
+    renderViewSwitch();
     renderBalanceChart();
     renderBarChart();
     renderTable();
   }
 
   function bindAssumptionInputs(){
-    [['in-capacity','capacity',MAX_AMOUNT],['in-liquid','liquid',MAX_AMOUNT],['in-return','returnPct',20],['in-fx','fx',MAX_AMOUNT]].forEach(function(f){
+    document.querySelectorAll('.split-field [data-rule]').forEach(function(b){
+      b.addEventListener('click', function(){
+        var rule = b.getAttribute('data-rule');
+        if(rule === household.splitRule) return;
+        household.splitRule = rule;
+        markHousehold(); syncInputs(); renderAll();
+      });
+    });
+    document.getElementById('viewSwitch').addEventListener('click', function(e){
+      var b = e.target.closest('[data-view]');
+      if(!b) return;
+      chartView = b.getAttribute('data-view');
+      try{ localStorage.setItem('runway.chartView', chartView); }catch(err){}
+      renderAll();
+    });
+    [['in-liquid','liquid',MAX_AMOUNT],['in-return','returnPct',20]].forEach(function(f){
       document.getElementById(f[0]).addEventListener('change', function(e){
         var v = parseFloat(e.target.value);
-        if(!isNaN(v) && v >= 0 && v <= f[2] && !(f[1] === 'fx' && v === 0)){
+        if(!isNaN(v) && v >= 0 && v <= f[2]){
           assumptions[f[1]] = v;
           markAssumptions();
         }
@@ -643,6 +880,8 @@
     channel = sb.channel('household-' + householdId)
       .on('postgres_changes', {event:'*', schema:'public', table:'goals', filter:'household_id=eq.' + householdId}, scheduleRefetch)
       .on('postgres_changes', {event:'*', schema:'public', table:'assumptions', filter:'household_id=eq.' + householdId}, scheduleRefetch)
+      .on('postgres_changes', {event:'*', schema:'public', table:'household_members', filter:'household_id=eq.' + householdId}, scheduleRefetch)
+      .on('postgres_changes', {event:'*', schema:'public', table:'households', filter:'id=eq.' + householdId}, scheduleRefetch)
       .subscribe();
   }
 
@@ -657,7 +896,7 @@
     sb.from('household_members').select('household_id').eq('email', userEmail).limit(1).then(function(res){
       if(res.error) throw res.error;
       if(!res.data.length){
-        var e = new Error('“' + userEmail + '” isn’t on this plan yet. It needs adding as a household member in Supabase (README.md, setup step 2) — then tap Retry.');
+        var e = new Error('“' + userEmail + '” isn’t on this plan yet. It needs adding as a household member in Supabase (README.md, setup step 3) — then tap Retry.');
         e.notMember = true;
         throw e;
       }
@@ -685,7 +924,7 @@
     document.getElementById('accountEmail').hidden = !email;
     document.getElementById('signOutBtn').hidden = !email;
     if(!email){
-      householdId = null; userEmail = null; goals = []; dirty = {};
+      householdId = null; userEmail = null; goals = []; dirty = {}; members = []; meId = null;
       if(channel){ sb.removeChannel(channel); channel = null; }
       showError('');
       showView('authView');
@@ -724,6 +963,7 @@
   }
 
   function start(){
+    try{ chartView = localStorage.getItem('runway.chartView') || 'household'; }catch(e){}
     bindAssumptionInputs();
     bindBalanceHover();
     bindBarHover();

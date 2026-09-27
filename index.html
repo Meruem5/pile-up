@@ -208,11 +208,11 @@
   table{border-collapse:collapse;width:100%;min-width:640px;font-size:0.88rem;}
   thead th{
     text-align:left;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;
-    color:var(--text-muted);font-weight:500;padding:0 10px 10px;border-bottom:1px solid var(--line);
+    color:var(--text-muted);font-weight:500;padding:0 7px 10px;border-bottom:1px solid var(--line);
     white-space:nowrap;
   }
   thead th.num, tbody td.num{text-align:right;}
-  tbody td{padding:12px 10px;border-bottom:1px solid var(--line);vertical-align:top;}
+  tbody td{padding:12px 7px;border-bottom:1px solid var(--line);vertical-align:top;}
   tbody tr:last-child td{border-bottom:none;}
   .goal-name{display:flex;align-items:center;gap:9px;}
   .goal-swatch{width:10px;height:10px;border-radius:50%;flex:none;margin-top:2px;}
@@ -225,7 +225,7 @@
   }
   td input[type="number"], td input[type="date"], td input[type="text"], td select, td textarea{
     font-family:var(--font-mono);font-size:0.86rem;color:var(--text-primary);background:var(--surface);
-    border:1px solid var(--border-strong);border-radius:6px;padding:6px 7px;width:100%;min-width:100px;
+    border:1px solid var(--border-strong);border-radius:6px;padding:6px 7px;width:100%;min-width:84px;
   }
   td input:focus-visible, td select:focus-visible, td textarea:focus-visible{outline:2px solid var(--accent);outline-offset:-1px;}
   .req-cell{font-family:var(--font-mono);font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;}
@@ -270,6 +270,40 @@
   .auth-form .add-fund-btn{margin-top:0;}
   .auth-msg{margin-top:12px;font-size:0.88rem;color:var(--text-secondary);}
   .overdue{color:var(--critical);font-family:var(--font-body);font-weight:500;}
+
+  .field-label{display:block;font-size:0.76rem;color:var(--text-muted);margin-bottom:5px;}
+  .split-field{grid-column:span 2;}
+  @media (max-width:420px){ .split-field{grid-column:auto;} }
+  .segmented{display:inline-flex;border:1px solid var(--border-strong);border-radius:8px;overflow:hidden;background:var(--surface);}
+  .segmented button{font:inherit;font-size:0.84rem;color:var(--text-secondary);background:none;border:none;padding:8px 12px;cursor:pointer;white-space:nowrap;}
+  .segmented button + button{border-left:1px solid var(--border-strong);}
+  .segmented button[aria-checked="true"]{background:var(--accent-wash);color:var(--text-primary);font-weight:500;}
+  .segmented button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
+  .segmented-sm button{font-size:0.78rem;padding:5px 10px;}
+
+  .people-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  @media (max-width:640px){ .people-grid{grid-template-columns:1fr;} }
+  .person{border:1px solid var(--line);border-radius:8px;padding:14px 16px;}
+  .person-head{display:flex;align-items:center;gap:8px;margin-bottom:10px;min-height:32px;}
+  .person-name{font-weight:600;font-size:0.98rem;}
+  .person-name-input{font:inherit;font-weight:600;font-size:0.95rem;color:var(--text-primary);background:var(--surface);border:1px solid var(--border-strong);border-radius:6px;padding:5px 8px;width:100%;max-width:200px;min-width:0;}
+  .you-tag{font-size:0.7rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);border:1px solid var(--border);border-radius:5px;padding:1px 6px;white-space:nowrap;}
+  .person-row{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:5px 0;font-size:0.88rem;color:var(--text-secondary);}
+  .person-row .v{font-family:var(--font-mono);font-variant-numeric:tabular-nums;color:var(--text-primary);text-align:right;}
+  .person-row .alt{color:var(--text-muted);font-size:0.78rem;margin-left:4px;}
+  .person-row.total{border-top:1px solid var(--line);margin-top:4px;padding-top:9px;}
+  .person-row.left .v{font-weight:600;font-size:1.02rem;}
+  .person-cap{display:flex;align-items:center;border:1px solid var(--border-strong);border-radius:6px;background:var(--surface);max-width:150px;}
+  .person-cap .prefix{padding:5px 0 5px 8px;color:var(--text-muted);font-family:var(--font-mono);font-size:0.86rem;}
+  .person-cap input{font-family:var(--font-mono);font-size:0.88rem;color:var(--text-primary);background:none;border:none;outline:none;padding:5px 8px 5px 3px;width:100%;min-width:0;text-align:right;}
+  .person-cap:focus-within{outline:2px solid var(--accent);outline-offset:-1px;}
+  .people-note:empty{display:none;}
+  .people-note{margin:12px 0 0;}
+  .split-line{font-size:0.74rem;color:var(--text-muted);margin-top:4px;font-family:var(--font-body);font-weight:400;white-space:nowrap;line-height:1.4;}
+  .row-controls .pct{width:62px;min-width:0;padding:3px 5px;font-size:0.74rem;}
+  .state-tag{font-family:var(--font-body);font-size:0.78rem;color:var(--text-muted);}
+  tr.inactive .req-cell, tr.inactive .months-cell{color:var(--text-muted);}
+  tr.inactive .goal-name-row input[type="text"]{color:var(--text-secondary);}
 </style>
 </head>
 <body>
@@ -316,13 +350,9 @@
 
   <section class="assumptions">
     <div class="card">
-      <div class="card-head"><h2>Your assumptions</h2></div>
-      <p class="chart-caption">These four numbers drive every chart below. Nothing here is verified — see Phase 3 of your decision log for the homework that replaces the guesses.</p>
+      <div class="card-head"><h2>Household</h2></div>
+      <p class="chart-caption">What you have together today, and how you split goals you share. Everything is in US dollars. Nothing here is verified — see Phase 3 of your decision log for the homework that replaces the guesses.</p>
       <div class="assume-grid">
-        <div class="field">
-          <label for="in-capacity">Combined monthly savings</label>
-          <div class="input-row"><span class="prefix">$</span><input id="in-capacity" type="number" step="50" min="0"></div>
-        </div>
         <div class="field">
           <label for="in-liquid">Starting liquid savings</label>
           <div class="input-row"><span class="prefix">$</span><input id="in-liquid" type="number" step="500" min="0"></div>
@@ -331,16 +361,18 @@
           <label for="in-return">Annual return on savings</label>
           <div class="input-row"><input id="in-return" type="number" step="0.1" min="0" max="20"><span class="suffix">%</span></div>
         </div>
-        <div class="field">
-          <label for="in-fx">HUF per USD</label>
-          <div class="input-row"><span class="prefix">Ft</span><input id="in-fx" type="number" step="1" min="1"></div>
+        <div class="field split-field">
+          <span class="field-label" id="splitLabel">Split shared goals</span>
+          <div class="segmented" role="radiogroup" aria-labelledby="splitLabel">
+            <button type="button" role="radio" data-rule="equal">50 / 50</button>
+            <button type="button" role="radio" data-rule="capacity">By savings capacity</button>
+          </div>
         </div>
       </div>
       <div class="stat-row">
         <div>
-          <div class="stat-label">Total needed each month, across every goal</div>
+          <div class="stat-label">Total needed each month, across every active goal</div>
           <div class="stat-value" id="statRequired">$0</div>
-          <div class="stat-note" id="statRequiredHuf"></div>
         </div>
         <div>
           <div class="stat-label">Gap vs. your combined capacity</div>
@@ -353,8 +385,17 @@
 
   <section>
     <div class="card">
+      <div class="card-head"><h2>Who pays what</h2></div>
+      <p class="chart-caption">Each person sets their own monthly savings capacity. Shared goals split by the rule above unless a goal sets its own; goals one of you owns are theirs alone. The figure in brackets is what the other split rule would ask.</p>
+      <div class="people-grid" id="peopleGrid"></div>
+      <p class="chart-caption people-note" id="peopleNote"></p>
+    </div>
+  </section>
+
+  <section>
+    <div class="card">
       <div class="card-head"><h2>Projected liquid savings</h2></div>
-      <p class="chart-caption">Your combined liquid balance if you save the amount above every month, compounding at your assumed return — with a dip wherever a purchase goal is spent, and a marker where a reserve goal hits its target without being spent.</p>
+      <p class="chart-caption">Your combined liquid balance if you both save your full capacity every month, compounding at your assumed return — with a dip wherever a purchase goal is spent, and a marker where a reserve goal hits its target without being spent.</p>
       <div class="chart-wrap" id="balanceChartWrap">
         <div class="tooltip" id="balanceTooltip"></div>
       </div>
@@ -363,8 +404,10 @@
 
   <section>
     <div class="card">
-      <div class="card-head"><h2>Monthly funding plan, by year</h2></div>
-      <p class="chart-caption">How much a month you'd need to set aside for each fund, and when — assuming an even, flat contribution from today until each goal's date. A fund drops out of the stack the year it's due.</p>
+      <div class="card-head"><h2>Monthly funding plan, by year</h2>
+        <div class="segmented segmented-sm" role="radiogroup" aria-label="Whose contributions" id="viewSwitch"></div>
+      </div>
+      <p class="chart-caption">How much a month you'd need to set aside for each active fund, and when — assuming an even, flat contribution from today until each goal's date. A fund drops out of the stack the year it's due.</p>
       <div class="chart-wrap" id="barChartWrap">
         <div class="tooltip" id="barTooltip"></div>
       </div>
@@ -385,8 +428,8 @@
               <th class="num">Target amount</th>
               <th class="num">Already saved</th>
               <th>Target date</th>
-              <th class="num">Months left</th>
-              <th class="num">Needed / month</th>
+              <th class="num">Months</th>
+              <th class="num">Per month</th>
             </tr>
           </thead>
           <tbody id="goalsTbody"></tbody>
