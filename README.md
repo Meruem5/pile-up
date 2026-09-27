@@ -24,11 +24,12 @@ Nothing personal belongs in this repo, because it's public: no member emails and
 5. **DNS**, at your registrar:
    - **Subdomain** (e.g. `runway.example.com`): a `CNAME` record pointing to `meruem5.github.io`.
    - **Apex domain** (`example.com`): `A` records pointing to `185.199.108.153`, `185.199.109.153`, `185.199.110.153` and `185.199.111.153`.
-6. **After both of you have signed in once** (optional hardening): Authentication → Sign In / Providers → turn off *Allow new users to sign up*. Strangers then can't even create empty accounts.
+6. **Email templates.** Authentication → Emails: paste `supabase/email-template.html` into both *Magic Link* and *Confirm signup* (a first-ever sign-in uses Confirm signup). Set the subject to "Your Runway sign-in link". Keep the `{{ .TokenHash }}` link as it is.
+7. **After both of you have signed in once** (optional hardening): Authentication → Sign In / Providers → turn off *Allow new users to sign up*. Strangers then can't even create empty accounts.
 
 ## Notes
 
-- **Open the sign-in link in the same browser you requested it from.** Magic links use PKCE, which binds the link to that browser; a link opened on another device won't sign you in there.
+- **Sign-in links work on any device, once, for about an hour.** The email links to `https://planarian.dev/?token_hash=…`, and `app.js` verifies the token on arrival, then removes it from the address bar. If you use Supabase's default email templates instead, links only work in the browser that requested them.
 - **Supabase's built-in email sender is heavily rate-limited.** If links stop arriving, wait, or configure custom SMTP under Authentication → Emails.
 - **Edits save per field and appear live for the other person.** An incoming change waits while you're typing in a field, so it can't overwrite your input. Unsaved changes are kept on the page and retried, and closing the tab asks first.
 - **Overdue goals** (target date in the past) are flagged. Their full remaining amount counts as due now, and they're left off the balance projection, since today's balance already reflects them.
