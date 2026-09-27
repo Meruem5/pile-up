@@ -657,8 +657,8 @@
     sb.from('household_members').select('household_id').eq('email', userEmail).limit(1).then(function(res){
       if(res.error) throw res.error;
       if(!res.data.length){
-        var e = new Error('“' + userEmail + '” isn’t a member of any household. Ask the other person to check the email, or see README.md setup step 3.');
-        e.fatal = true;
+        var e = new Error('“' + userEmail + '” isn’t on this plan yet. It needs adding as a household member in Supabase (README.md, setup step 2) — then tap Retry.');
+        e.notMember = true;
         throw e;
       }
       householdId = res.data[0].household_id;
@@ -672,10 +672,9 @@
       subscribe();
     }, function(err){
       booting = false;
-      showView('loadingView');
+      showView(null);
       setStatus('error', 'Couldn’t load');
-      showError(err.fatal ? err.message : (navigator.onLine ? 'Couldn’t load your plan (' + (err.message || 'unknown error') + ').' : 'You’re offline — reconnect and retry.'));
-      document.getElementById('retryBtn').hidden = !!err.fatal;
+      showError(err.notMember ? err.message : (navigator.onLine ? 'Couldn’t load your plan (' + (err.message || 'unknown error') + ').' : 'You’re offline — reconnect and retry.'));
     });
   }
 
