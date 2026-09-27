@@ -1,0 +1,86 @@
+<!doctype html>
+<!--
+  Runway sign-in email. Paste into Supabase → Authentication → Emails, in BOTH
+  the "Magic Link" and "Confirm signup" templates (a first-ever sign-in uses
+  Confirm signup). Subject for both: Your Runway sign-in link
+
+  The link must keep {{ .TokenHash }} — app.js verifies it on arrival. A plain
+  https://planarian.dev link would open the site without signing anyone in.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
+<title>Your Runway sign-in link</title>
+<style>
+  @media (prefers-color-scheme: dark){
+    .bg{background:#0d0f10 !important;}
+    .card{background:#16191b !important;border-color:#2c2c2a !important;}
+    .primary{color:#f5f6f5 !important;}
+    .secondary{color:#c3c2b7 !important;}
+    .muted{color:#898781 !important;}
+    .rule{border-color:#2c2c2a !important;}
+    .btn{background:#3987e5 !important;}
+    .link{color:#3987e5 !important;}
+  }
+  @media (max-width:520px){
+    .pad{padding:24px 20px !important;}
+  }
+</style>
+</head>
+<body class="bg" style="margin:0;padding:0;background:#f7f8f7;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="bg" style="background:#f7f8f7;">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:520px;">
+
+          <tr>
+            <td style="padding:0 4px 18px;">
+              <div class="muted" style="font-family:'IBM Plex Mono',Menlo,Consolas,monospace;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#878d90;">Financial timeline &amp; funding plan</div>
+              <div class="primary" style="font-family:'IBM Plex Serif',Georgia,'Times New Roman',serif;font-size:26px;font-weight:600;color:#14181a;margin-top:4px;">Runway</div>
+            </td>
+          </tr>
+
+          <tr>
+            <td class="card pad" style="background:#ffffff;border:1px solid #e3e5e4;border-radius:10px;padding:28px 28px;">
+              <div class="primary" style="font-family:'IBM Plex Serif',Georgia,'Times New Roman',serif;font-size:19px;font-weight:600;color:#14181a;margin:0 0 10px;">Sign in to your plan</div>
+              <p class="secondary" style="font-family:'IBM Plex Sans',-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;font-size:15px;line-height:1.55;color:#52585c;margin:0 0 22px;">
+                Tap the button to sign in to Runway. It works once, on any device, for the next hour.
+              </p>
+
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td class="btn" style="background:#2a78d6;border-radius:8px;">
+                    <a href="https://planarian.dev/?token_hash={{ .TokenHash }}&amp;type=email" target="_blank"
+                       style="display:inline-block;padding:12px 22px;font-family:'IBM Plex Sans',-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:8px;">Sign in to Runway</a>
+                  </td>
+                </tr>
+              </table>
+
+              <div class="rule" style="border-top:1px solid #e1e0d9;margin:26px 0 16px;line-height:0;font-size:0;">&nbsp;</div>
+
+              <p class="muted" style="font-family:'IBM Plex Sans',-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;font-size:13px;line-height:1.5;color:#878d90;margin:0 0 6px;">
+                Button not working? Paste this into your browser:
+              </p>
+              <p style="font-family:'IBM Plex Mono',Menlo,Consolas,monospace;font-size:12px;line-height:1.5;margin:0;word-break:break-all;">
+                <a class="link" href="https://planarian.dev/?token_hash={{ .TokenHash }}&amp;type=email" target="_blank" style="color:#2a78d6;text-decoration:underline;">https://planarian.dev/?token_hash={{ .TokenHash }}&amp;type=email</a>
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:18px 4px 0;">
+              <p class="muted" style="font-family:'IBM Plex Sans',-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;font-size:12px;line-height:1.55;color:#878d90;margin:0;">
+                Sent to {{ .Email }} because someone asked to sign in to Runway with this address. If that wasn’t you, ignore this email: without the link, nobody can get in.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

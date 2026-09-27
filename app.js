@@ -679,7 +679,9 @@
     });
   }
 
+  var verifying = false;
   function onSession(session){
+    if(verifying && !session) return;  // don't flash the sign-in form while a link is being checked
     var email = session && session.user && session.user.email;
     document.getElementById('accountEmail').hidden = !email;
     document.getElementById('signOutBtn').hidden = !email;
@@ -745,6 +747,40 @@
     sb.auth.onAuthStateChange(function(event, session){
       // Supabase warns against awaiting other client calls inside this callback.
       setTimeout(function(){ onSession(session); }, 0);
+    });
+    verifyEmailLink();
+  }
+
+  // The email template links to ?token_hash=…&type=email (see
+  // supabase/email-template.html). Verifying here instead of via Supabase's
+  // redirect means the link works on any device, not just the requesting one.
+  function verifyEmailLink(){
+    var params = new URLSearchParams(location.search);
+    var tokenHash = params.get('token_hash');
+    if(!tokenHash) return;
+    var type = params.get('type') || 'email';
+    // One-time token: drop it from the address bar and history either way.
+    history.replaceState(null, '', location.pathname + location.hash);
+    verifying = true;
+    showView('loadingView');
+    setStatus('saving', 'Signing in…');
+    sb.auth.verifyOtp({ token_hash: tokenHash, type: type }).then(function(res){
+      verifying = false;
+      if(res.error) linkFailed();
+    }, function(){
+      verifying = false;
+      linkFailed();
+    });
+  }
+  function linkFailed(){
+    // Already signed in (e.g. clicked an old link again)? Just carry on.
+    sb.auth.getSession().then(function(res){
+      var session = res && res.data && res.data.session;
+      onSession(session);
+      if(!session){
+        document.getElementById('authMsg').textContent =
+          'That sign-in link has expired or was already used. Request a new one below.';
+      }
     });
   }
 
