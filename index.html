@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src https://mhvrrnwktunexctmtuok.supabase.co wss://mhvrrnwktunexctmtuok.supabase.co; base-uri 'none'; form-action 'none'">
+<meta name="robots" content="noindex, nofollow">
+<title>Runway</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600&display=swap">
+<style>
+  :root{
+    color-scheme: light;
+    --bg: #f7f8f7;
+    --surface: #ffffff;
+    --surface-2: #eef0ee;
+    --text-primary: #14181a;
+    --text-secondary: #52585c;
+    --text-muted: #878d90;
+    --border: rgba(20,24,26,0.10);
+    --border-strong: rgba(20,24,26,0.18);
+    --line: #e1e0d9;
+    --baseline: #c3c2b7;
+    --accent: #2a78d6;
+    --accent-wash: rgba(42,120,214,0.10);
+    --good: #0ca30c;
+    --warning: #fab219;
+    --critical: #d03b3b;
+    --series-blue: #2a78d6;
+    --series-orange: #eb6834;
+    --series-orchid: #ca40fc;
+    --series-aqua: #1baf7a;
+    --series-rust: #853750;
+    --series-yellow: #eda100;
+    --series-wine: #81385c;
+    --series-indigo: #0016f7;
+    --series-magenta: #e87ba4;
+    --series-green: #008300;
+    --series-violet: #4a3aa7;
+    --series-red: #e34948;
+    --font-display: 'IBM Plex Serif', Georgia, 'Times New Roman', serif;
+    --font-body: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-mono: 'IBM Plex Mono', 'SFMono-Regular', Menlo, Consolas, monospace;
+    --radius: 10px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      color-scheme: dark;
+      --bg: #0d0f10;
+      --surface: #16191b;
+      --surface-2: #1d2023;
+      --text-primary: #f5f6f5;
+      --text-secondary: #c3c2b7;
+      --text-muted: #898781;
+      --border: rgba(255,255,255,0.12);
+      --border-strong: rgba(255,255,255,0.22);
+      --line: #2c2c2a;
+      --baseline: #383835;
+      --accent: #3987e5;
+      --accent-wash: rgba(57,135,229,0.14);
+      --series-blue: #3987e5;
+      --series-orange: #d95926;
+      --series-orchid: #863ca4;
+      --series-aqua: #199e70;
+      --series-rust: #8e405b;
+      --series-yellow: #c98500;
+      --series-wine: #a40675;
+      --series-indigo: #0743f9;
+      --series-magenta: #d55181;
+      --series-green: #008300;
+      --series-violet: #9085e9;
+      --series-red: #e66767;
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme: dark;
+    --bg: #0d0f10;
+    --surface: #16191b;
+    --surface-2: #1d2023;
+    --text-primary: #f5f6f5;
+    --text-secondary: #c3c2b7;
+    --text-muted: #898781;
+    --border: rgba(255,255,255,0.12);
+    --border-strong: rgba(255,255,255,0.22);
+    --line: #2c2c2a;
+    --baseline: #383835;
+    --accent: #3987e5;
+    --accent-wash: rgba(57,135,229,0.14);
+    --series-blue: #3987e5;
+    --series-orange: #d95926;
+    --series-orchid: #863ca4;
+    --series-aqua: #199e70;
+    --series-rust: #8e405b;
+    --series-yellow: #c98500;
+    --series-wine: #a40675;
+    --series-indigo: #0743f9;
+    --series-magenta: #d55181;
+    --series-green: #008300;
+    --series-violet: #9085e9;
+    --series-red: #e66767;
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    background:var(--bg);
+    color:var(--text-primary);
+    font-family:var(--font-body);
+    padding-inline:20px;
+  }
+  .page{max-width:920px;margin:0 auto;padding-block:28px 60px;}
+
+  h1,h2,h3{font-family:var(--font-display);font-weight:600;text-wrap:balance;margin:0;}
+  h2{font-size:1.15rem;color:var(--text-primary);}
+  p{margin:0;line-height:1.55;}
+  .lede{color:var(--text-secondary);font-size:0.98rem;max-width:64ch;}
+
+  a{color:var(--accent);}
+
+  .topbar{
+    display:flex;flex-wrap:wrap;gap:12px 20px;align-items:baseline;justify-content:space-between;
+    padding-bottom:18px;border-bottom:1px solid var(--border);margin-bottom:22px;
+  }
+  .topbar-left{display:flex;flex-direction:column;gap:4px;}
+  .eyebrow{font-family:var(--font-mono);font-size:0.72rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);}
+  h1{font-size:1.7rem;}
+  .topbar-right{display:flex;align-items:center;gap:10px;font-size:0.82rem;color:var(--text-muted);}
+  .status-pill{
+    display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;
+    border:1px solid var(--border);background:var(--surface-2);font-size:0.78rem;color:var(--text-secondary);
+  }
+  .status-dot{width:7px;height:7px;border-radius:50%;background:var(--text-muted);}
+  .reset-btn{
+    font:inherit;font-size:0.78rem;color:var(--text-muted);background:none;border:none;
+    text-decoration:underline;text-underline-offset:2px;cursor:pointer;padding:0;
+  }
+  .reset-btn:hover{color:var(--text-primary);}
+
+  .banner{
+    background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);
+    padding:14px 16px;margin-bottom:26px;font-size:0.9rem;color:var(--text-secondary);line-height:1.5;
+  }
+  .banner b{color:var(--text-primary);}
+
+  section{margin-bottom:34px;}
+  .card{
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+    padding:20px 22px;
+  }
+  .card + .card{margin-top:14px;}
+  .card-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:4px;}
+  .chart-caption{color:var(--text-secondary);font-size:0.86rem;margin-top:4px;margin-bottom:14px;max-width:70ch;}
+
+  /* assumptions */
+  .assume-grid{
+    display:grid;grid-template-columns:repeat(4,1fr);gap:14px 16px;margin-top:16px;
+  }
+  @media (max-width:720px){ .assume-grid{grid-template-columns:1fr 1fr;} }
+  @media (max-width:420px){ .assume-grid{grid-template-columns:1fr;} }
+  .field label{
+    display:block;font-size:0.76rem;color:var(--text-muted);margin-bottom:5px;
+    letter-spacing:0.01em;
+  }
+  .field .input-row{
+    display:flex;align-items:center;border:1px solid var(--border-strong);border-radius:8px;
+    background:var(--surface);overflow:hidden;
+  }
+  .field .prefix{padding:8px 0 8px 10px;color:var(--text-muted);font-family:var(--font-mono);font-size:0.9rem;}
+  .field input{
+    font-family:var(--font-mono);font-size:0.92rem;color:var(--text-primary);background:none;
+    border:none;outline:none;padding:8px 10px 8px 4px;width:100%;min-width:0;
+  }
+  .field input:focus-visible{outline:2px solid var(--accent);outline-offset:-1px;border-radius:6px;}
+  .field .suffix{padding:8px 10px 8px 0;color:var(--text-muted);font-size:0.85rem;}
+
+  .stat-row{
+    display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px;padding-top:18px;border-top:1px solid var(--line);
+  }
+  @media (max-width:560px){ .stat-row{grid-template-columns:1fr;} }
+  .stat-label{font-size:0.78rem;color:var(--text-muted);margin-bottom:4px;}
+  .stat-value{font-family:var(--font-mono);font-size:1.5rem;font-weight:500;font-variant-numeric:tabular-nums;}
+  .stat-note{font-size:0.82rem;margin-top:3px;display:flex;align-items:center;gap:6px;color:var(--text-secondary);}
+  .dot{width:8px;height:8px;border-radius:50%;flex:none;}
+  .dot.good{background:var(--good);}
+  .dot.critical{background:var(--critical);}
+
+  /* charts */
+  .chart-wrap{position:relative;}
+  .chart-wrap svg{display:block;width:100%;height:auto;overflow:visible;}
+  .axis-label{font-family:var(--font-mono);font-size:10px;fill:var(--text-muted);}
+  .grid-line{stroke:var(--line);stroke-width:1;}
+  .baseline-line{stroke:var(--baseline);stroke-width:1;}
+  .tooltip{
+    position:absolute;pointer-events:none;background:var(--text-primary);color:var(--bg);
+    font-size:0.78rem;line-height:1.45;border-radius:7px;padding:8px 10px;
+    box-shadow:0 6px 18px rgba(0,0,0,0.18);opacity:0;transform:translate(-50%,-100%);
+    transition:opacity 0.08s ease;white-space:nowrap;z-index:5;font-family:var(--font-body);
+  }
+  .tooltip .t-title{font-weight:600;margin-bottom:3px;font-family:var(--font-mono);}
+  .tooltip .t-row{display:flex;justify-content:space-between;gap:14px;}
+  .tooltip .t-row .swatch{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px;}
+
+  .legend{display:flex;flex-wrap:wrap;gap:10px 16px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line);}
+  .legend-item{display:flex;align-items:center;gap:6px;font-size:0.8rem;color:var(--text-secondary);}
+  .legend-swatch{width:10px;height:10px;border-radius:2px;flex:none;}
+
+  /* table */
+  .table-scroll{overflow-x:auto;}
+  table{border-collapse:collapse;width:100%;min-width:640px;font-size:0.88rem;}
+  thead th{
+    text-align:left;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;
+    color:var(--text-muted);font-weight:500;padding:0 10px 10px;border-bottom:1px solid var(--line);
+    white-space:nowrap;
+  }
+  thead th.num, tbody td.num{text-align:right;}
+  tbody td{padding:12px 10px;border-bottom:1px solid var(--line);vertical-align:top;}
+  tbody tr:last-child td{border-bottom:none;}
+  .goal-name{display:flex;align-items:center;gap:9px;}
+  .goal-swatch{width:10px;height:10px;border-radius:50%;flex:none;margin-top:2px;}
+  .goal-name-text{font-weight:500;}
+  .goal-notes{font-size:0.78rem;color:var(--text-muted);margin-top:3px;line-height:1.4;max-width:34ch;}
+  .badge{
+    display:inline-block;font-size:0.68rem;letter-spacing:0.03em;text-transform:uppercase;
+    color:var(--text-secondary);background:var(--surface-2);border:1px solid var(--border);
+    border-radius:5px;padding:1px 6px;margin-left:7px;vertical-align:1px;
+  }
+  td input[type="number"], td input[type="date"], td input[type="text"], td select, td textarea{
+    font-family:var(--font-mono);font-size:0.86rem;color:var(--text-primary);background:var(--surface);
+    border:1px solid var(--border-strong);border-radius:6px;padding:6px 7px;width:100%;min-width:100px;
+  }
+  td input:focus-visible, td select:focus-visible, td textarea:focus-visible{outline:2px solid var(--accent);outline-offset:-1px;}
+  .req-cell{font-family:var(--font-mono);font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .months-cell{font-family:var(--font-mono);color:var(--text-secondary);font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .already-input{min-width:90px;}
+  .goal-name-row{display:flex;align-items:center;gap:7px;margin-bottom:6px;}
+  .color-dot{width:10px;height:10px;border-radius:50%;flex:none;}
+  .goal-name-row select{width:auto;min-width:0;flex:none;font-size:0.72rem;padding:4px 5px;}
+  .goal-name-row input[type="text"]{font-family:var(--font-body);font-weight:500;font-size:0.9rem;min-width:170px;}
+  td:first-child{min-width:250px;}
+  td textarea{font-family:var(--font-body);font-size:0.8rem;line-height:1.4;resize:vertical;min-height:40px;color:var(--text-secondary);}
+  .row-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:7px;font-size:0.76rem;color:var(--text-muted);}
+  .row-controls select{width:auto;padding:3px 5px;font-size:0.74rem;min-width:0;}
+  .row-controls label{display:flex;align-items:center;gap:4px;cursor:pointer;}
+  .row-controls input[type="checkbox"]{margin:0;accent-color:var(--accent);}
+  .remove-btn{
+    background:none;border:none;color:var(--text-muted);font-size:0.76rem;text-decoration:underline;
+    text-underline-offset:2px;cursor:pointer;padding:0;font-family:var(--font-body);margin-left:auto;
+  }
+  .remove-btn:hover{color:var(--critical);}
+  .add-fund-btn{
+    margin-top:14px;font:inherit;font-size:0.86rem;color:var(--accent);background:var(--surface-2);
+    border:1px solid var(--border);border-radius:8px;padding:9px 14px;cursor:pointer;font-weight:500;
+  }
+  .add-fund-btn:hover{border-color:var(--border-strong);}
+
+  footer{margin-top:40px;padding-top:20px;border-top:1px solid var(--border);font-size:0.82rem;color:var(--text-muted);line-height:1.6;}
+  footer a{color:var(--text-secondary);}
+
+  [hidden]{display:none !important;}
+  .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;}
+  .status-pill[data-state="synced"] .status-dot{background:var(--good);}
+  .status-pill[data-state="saving"] .status-dot{background:var(--accent);}
+  .status-pill[data-state="error"] .status-dot{background:var(--critical);}
+  .status-pill[data-state="offline"] .status-dot{background:var(--warning);}
+  .error-banner{display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-color:var(--critical);}
+  .banner-btn{font:inherit;font-size:0.84rem;font-weight:500;color:var(--text-primary);background:var(--surface);border:1px solid var(--border-strong);border-radius:7px;padding:5px 12px;cursor:pointer;margin-left:auto;}
+  .auth-card{max-width:460px;}
+  .auth-form{display:flex;gap:10px;flex-wrap:wrap;}
+  .auth-form input{flex:1 1 220px;font:inherit;font-size:0.95rem;color:var(--text-primary);background:var(--surface);border:1px solid var(--border-strong);border-radius:8px;padding:9px 11px;min-width:0;}
+  .auth-form input:focus-visible{outline:2px solid var(--accent);outline-offset:-1px;}
+  .auth-form .add-fund-btn{margin-top:0;}
+  .auth-msg{margin-top:12px;font-size:0.88rem;color:var(--text-secondary);}
+  .overdue{color:var(--critical);font-family:var(--font-body);font-weight:500;}
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="topbar">
+    <div class="topbar-left">
+      <span class="eyebrow">Financial timeline &amp; funding plan</span>
+      <h1>Runway</h1>
+    </div>
+    <div class="topbar-right">
+      <span class="status-pill" id="statusPill" data-state="idle" role="status" aria-live="polite"><span class="status-dot"></span><span id="statusText">Not signed in</span></span>
+      <span id="accountEmail" hidden></span>
+      <button class="reset-btn" id="signOutBtn" type="button" hidden>Sign out</button>
+    </div>
+  </div>
+
+  <div class="banner error-banner" id="errorBanner" role="alert" hidden>
+    <span id="errorText"></span>
+    <button type="button" class="banner-btn" id="retryBtn">Retry</button>
+  </div>
+
+  <section id="authView" hidden>
+    <div class="card auth-card">
+      <h2>Sign in</h2>
+      <p class="chart-caption">Enter your email and we’ll send you a sign-in link. Only the two emails on this household can see or change anything here.</p>
+      <form id="authForm" class="auth-form">
+        <label for="authEmail" class="sr-only">Email</label>
+        <input id="authEmail" type="email" autocomplete="email" required placeholder="you@example.com">
+        <button type="submit" class="add-fund-btn" id="authSubmit">Send sign-in link</button>
+      </form>
+      <p class="auth-msg" id="authMsg" role="status" aria-live="polite"></p>
+    </div>
+  </section>
+
+  <section id="loadingView" hidden>
+    <p class="lede">Loading your plan…</p>
+  </section>
+
+  <div id="appView" hidden>
+  <div class="banner">
+    <b>Every number below is a placeholder, not a plan.</b> Edit anything here to test scenarios together — changes save to your shared plan and show up for both of you. Once you agree on real figures, write them into your <a href="https://claude.ai/code/artifact/2212ed6f-d6ee-40a9-bc07-7bb6d8900033" target="_blank" rel="noopener">decision log</a> so they stick.
+  </div>
+
+  <section class="assumptions">
+    <div class="card">
+      <div class="card-head"><h2>Your assumptions</h2></div>
+      <p class="chart-caption">These four numbers drive every chart below. Nothing here is verified — see Phase 3 of your decision log for the homework that replaces the guesses.</p>
+      <div class="assume-grid">
+        <div class="field">
+          <label for="in-capacity">Combined monthly savings</label>
+          <div class="input-row"><span class="prefix">$</span><input id="in-capacity" type="number" step="50" min="0"></div>
+        </div>
+        <div class="field">
+          <label for="in-liquid">Starting liquid savings</label>
+          <div class="input-row"><span class="prefix">$</span><input id="in-liquid" type="number" step="500" min="0"></div>
+        </div>
+        <div class="field">
+          <label for="in-return">Annual return on savings</label>
+          <div class="input-row"><input id="in-return" type="number" step="0.1" min="0" max="20"><span class="suffix">%</span></div>
+        </div>
+        <div class="field">
+          <label for="in-fx">HUF per USD</label>
+          <div class="input-row"><span class="prefix">Ft</span><input id="in-fx" type="number" step="1" min="1"></div>
+        </div>
+      </div>
+      <div class="stat-row">
+        <div>
+          <div class="stat-label">Total needed each month, across every goal</div>
+          <div class="stat-value" id="statRequired">$0</div>
+          <div class="stat-note" id="statRequiredHuf"></div>
+        </div>
+        <div>
+          <div class="stat-label">Gap vs. your combined capacity</div>
+          <div class="stat-value" id="statGap">$0</div>
+          <div class="stat-note" id="statGapNote"><span class="dot good"></span><span>—</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="card">
+      <div class="card-head"><h2>Projected liquid savings</h2></div>
+      <p class="chart-caption">Your combined liquid balance if you save the amount above every month, compounding at your assumed return — with a dip wherever a purchase goal is spent, and a marker where a reserve goal hits its target without being spent.</p>
+      <div class="chart-wrap" id="balanceChartWrap">
+        <div class="tooltip" id="balanceTooltip"></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="card">
+      <div class="card-head"><h2>Monthly funding plan, by year</h2></div>
+      <p class="chart-caption">How much a month you'd need to set aside for each fund, and when — assuming an even, flat contribution from today until each goal's date. A fund drops out of the stack the year it's due.</p>
+      <div class="chart-wrap" id="barChartWrap">
+        <div class="tooltip" id="barTooltip"></div>
+      </div>
+      <div class="legend" id="legend"></div>
+      <p class="chart-caption" id="offChartNote" style="margin-top:12px;margin-bottom:0;"></p>
+    </div>
+  </section>
+
+  <section>
+    <div class="card">
+      <div class="card-head"><h2>Funding plan by goal</h2></div>
+      <p class="chart-caption">Edit any field, recolor a fund, or add one of your own — the monthly figure and both charts above recalculate immediately. "Already saved" is money you've earmarked for that specific goal; it should already be part of your starting liquid savings above, not extra on top of it.</p>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Fund</th>
+              <th class="num">Target amount</th>
+              <th class="num">Already saved</th>
+              <th>Target date</th>
+              <th class="num">Months left</th>
+              <th class="num">Needed / month</th>
+            </tr>
+          </thead>
+          <tbody id="goalsTbody"></tbody>
+        </table>
+      </div>
+      <button class="add-fund-btn" id="addFundBtn" type="button">+ Add a fund</button>
+    </div>
+  </section>
+  </div>
+
+  <footer>
+    Not financial or tax advice — a starting point for your own conversation. Your plan is stored in a private database that only the two household members can read or write. See the <a href="https://claude.ai/code/artifact/2212ed6f-d6ee-40a9-bc07-7bb6d8900033" target="_blank" rel="noopener">agenda &amp; decision log</a> for the sessions this feeds into.
+  </footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js" integrity="sha384-Rj26LVGvoeRVR6+mwQmFfcR3QOBEwT+ZmuCWpuiqeTzJpCs0ER4ITAWGb4Hiy3Ok" crossorigin="anonymous"></script>
+<script src="app.js"></script>
+</body>
+</html>
